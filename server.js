@@ -326,15 +326,54 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ error: "Server error during login" });
   }
 });
-  
+
 
 // =========================
 // Protected Weather API
 // GET /weather?city=Riyadh
 // =========================
 app.get("/weather", async (req, res) => {
-  // Implement logic here based on the TODO 3.
+  try {
+    // 1) Read Authorization header
+    const authHeader = req.headers.authorization;
+
+    // If missing token → deny access
+    if (!authHeader) {
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
+
+    // 2) Extract token after "Bearer "
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "Invalid Authorization format" });
+    }
+
+    // 3) Verify JWT token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET); // secret: "abc123"
+    } catch (err) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    // 4) Read city query parameter
+    const city = req.query.city || "Unknown";
+
+    // 5) Return fake weather data
+    return res.json({
+      city,
+      temperature: "27°C",
+      condition: "Sunny",
+      requestedBy: decoded.email,  // from token
+    });
+
+  } catch (err) {
+    console.error("Weather API error:", err);
+    return res.status(500).json({ error: "Server error in /weather" });
+  }
 });
+
 
 // Start server
 app.listen(PORT, () =>
